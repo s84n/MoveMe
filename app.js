@@ -18,6 +18,19 @@ const WD = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const state = { tab: 'day', day: todayIso(), weekStart: mondayOf(todayIso()) };
 const act = (id) => ACTIVITIES.find((a) => a.id === id);
 const isDone = (date, id) => !!store.get(date, id).done;
+const fmtNum = (n, digits = 0) => n.toLocaleString('de-DE', { maximumFractionDigits: digits });
+
+// ---------- Theme (auto | light | dark) ----------
+const THEME_KEY = 'moveme-theme';
+const getTheme = () => { try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch { return 'auto'; } };
+function applyTheme(t) {
+  const root = document.documentElement;
+  if (t === 'auto') root.removeAttribute('data-theme'); else root.dataset.theme = t;
+  const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelector('meta[name=theme-color]').content = dark ? '#0a1210' : '#e9f5ee';
+}
+applyTheme(getTheme());
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(getTheme()));
 
 // ---------- Streaks / Statistik ----------
 function stats(a) {
@@ -44,8 +57,10 @@ function stats(a) {
   const monthStart = today.slice(0, 8) + '01';
   const month = inRange(monthStart, today);
   const sum = (arr) => arr.reduce((s, d) => s + (store.get(d, a.id).value || 0), 0);
+  const km = (n) => n * (a.kmPerUnit || 0);
   return { cur, best, week: week.length, month: month.length, total: days.length,
-    weekSum: sum(week), monthSum: sum(month), allSum: sum(days) };
+    weekSum: sum(week), monthSum: sum(month), allSum: sum(days),
+    kmTotal: km(days.length), kmMonth: km(month.length), minTotal: days.length * (a.minutes || 0) };
 }
 
 // ---------- Ansichten ----------
@@ -54,7 +69,7 @@ function dayView() {
   const isToday = state.day === today;
   const tiles = ACTIVITIES.map((a) => {
     const e = store.get(state.day, a.id);
-    const style = `--c:${a.color};--soft:${a.soft}`;
+    const style = `--c:${a.color};--c2:${a.c2}`;
     if (a.type === 'count') {
       return `<section class="tile ${e.done ? 'done' : ''}" style="${style}">
         <div class="t-head"><span class="t-icon">${a.icon}</span><span class="t-name">${a.name}</span></div>
@@ -91,7 +106,7 @@ function weekView() {
       const label = a.type === 'count' && e.value ? e.value : (e.done ? '✓' : '');
       return `<button class="cell ${e.done ? 'done' : ''} ${d > today ? 'future' : ''}" data-act="goto" data-date="${d}">${label}</button>`;
     }).join('');
-    return `<section class="wk-row" style="--c:${a.color};--soft:${a.soft}">
+    return `<section class="wk-row" style="--c:${a.color};--c2:${a.c2}">
       <div class="wk-title"><span>${a.icon} ${a.name}</span><b>${n}/7</b></div>
       <div class="wk-cells">${cells}</div>
     </section>`;
@@ -110,19 +125,38 @@ function statsView() {
       ? `<div class="kv"><span>Diese Woche</span><b>${s.weekSum}</b></div>
          <div class="kv"><span>Dieser Monat</span><b>${s.monthSum}</b></div>
          <div class="kv"><span>Gesamt</span><b>${s.allSum}</b></div>` : '';
-    return `<section class="card" style="--c:${a.color};--soft:${a.soft}">
+    return `<section class="card" style="--c:${a.color};--c2:${a.c2}">
       <h2>${a.icon} ${a.name}</h2>
       <div class="big"><div><b>${s.cur}</b><span>Serie (Tage)</span></div><div><b>${s.best}</b><span>Beste Serie</span></div></div>
       <div class="kv"><span>Tage diese Woche</span><b>${s.week}</b></div>
       <div class="kv"><span>Tage dieser Monat</span><b>${s.month}</b></div>
-      <div class="kv"><span>Tage gesamt</span><b>${s.total}</b></div>${extra}
+      <div class="kv"><span>Tage gesamt</span><b>${s.total}</b></div>${a.kmPerUnit
+        ? `<div class="kv"><span>Strecke dieser Monat (ca.)</span><b>${fmtNum(s.kmMonth, 1)} km</b></div>` : ''}${extra}
     </section>`;
   }).join('');
-  return `<header class="bar"><div class="title"><h1>Statistik</h1></div></header>${cards}`;
+  const totals = ACTIVITIES.map((a) => {
+    const s = stats(a);
+    const main = a.type === 'count' ? s.allSum : s.total;
+    const label = a.type === 'count' ? `${a.name} gesamt` : `${a.name}-Einheiten`;
+    const sub = a.kmPerUnit
+      ? `≈ ${fmtNum(s.kmTotal, 1)} km · ${fmtNum(s.minTotal)} Min`
+      : (a.type === 'count' ? `an ${s.total} Tagen` : '');
+    return `<div class="total" style="--c:${a.color};--c2:${a.c2}">
+      <span class="tl">${a.icon} ${label}</span><b>${fmtNum(main)}</b><small>${sub}</small></div>`;
+  }).join('');
+  return `<header class="bar"><div class="title"><h1>Statistik</h1></div></header>
+    <section class="totals">${totals}</section>${cards}
+    <p class="hint center">Kilometer sind geschätzt: ${ACTIVITIES.filter((a) => a.kmPerUnit).map((a) => `${a.minutes} Min ≈ ${fmtNum(a.kmPerUnit, 1)} km`).join(', ')} pro Einheit (Anfängertempo ca. 8 Min/km).</p>`;
 }
 
 function settingsView() {
+  const t = getTheme();
+  const seg = (v, l) => `<button class="${t === v ? 'on' : ''}" data-act="theme" data-v="${v}">${l}</button>`;
   return `<header class="bar"><div class="title"><h1>Mehr</h1></div></header>
+    <section class="card">
+      <h2>Darstellung</h2>
+      <div class="seg">${seg('auto', 'Auto')}${seg('light', 'Hell')}${seg('dark', 'Dunkel')}</div>
+    </section>
     <section class="card">
       <h2>Datensicherung</h2>
       <p class="hint">Alle Daten liegen nur auf diesem Handy. Sichere sie regelmäßig als Datei.</p>
@@ -160,6 +194,10 @@ const actions = {
   wprev: () => { state.weekStart = addDays(state.weekStart, -7); },
   wnext: () => { if (state.weekStart < mondayOf(todayIso())) state.weekStart = addDays(state.weekStart, 7); },
   goto: (el) => { if (el.dataset.date <= todayIso()) { state.day = el.dataset.date; state.tab = 'day'; } },
+  theme: (el) => {
+    try { localStorage.setItem(THEME_KEY, el.dataset.v); } catch { /* ignorieren */ }
+    applyTheme(el.dataset.v);
+  },
   export: () => {
     const blob = new Blob([store.exportJson()], { type: 'application/json' });
     const a = document.createElement('a');
