@@ -1,6 +1,7 @@
 import { ACTIVITIES } from './activities.js';
 import * as store from './store.js';
 
+const VERSION = '3';
 const $view = document.getElementById('view');
 const $tabs = document.getElementById('tabs');
 
@@ -164,7 +165,8 @@ function settingsView() {
       <button class="btn ghost" data-act="import">Daten importieren</button>
       <input type="file" id="file" accept="application/json,.json" hidden>
       <p class="hint" id="msg"></p>
-    </section>`;
+    </section>
+    <p class="hint center">MoveMe · Version ${VERSION}</p>`;
 }
 
 const views = { day: dayView, week: weekView, stats: statsView, settings: settingsView };

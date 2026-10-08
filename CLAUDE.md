@@ -5,7 +5,7 @@ Offline-fähige PWA zum täglichen Abhaken von Joggen und Liegestützen. Läuft 
 ## Stack und Prinzipien
 - Vanilla HTML/CSS/JS als ES-Module, **kein Framework, kein Build-Schritt**. Bewusst winzig und schnell halten.
 - Daten: IndexedDB (`store.js`) mit In-Memory-Cache, Schreibzugriffe asynchron. Nur lokal auf dem Handy.
-- Offline: Service Worker (`sw.js`), cache-first mit Hintergrund-Update.
+- Offline: Service Worker (`sw.js`), network-first (cache: no-cache), Cache nur als Offline-Fallback.
 - Hosting: GitHub Pages, https://s84n.github.io/MoveMe/ (Repo `s84n/MoveMe`, öffentlich, Branch `main`, Ordner `/`).
 
 ## Dateien
@@ -14,7 +14,7 @@ Offline-fähige PWA zum täglichen Abhaken von Joggen und Liegestützen. Läuft 
 - `app.js` – Ansichten, Navigation, Statistik/Streaks, Theme-Umschalter, Export/Import
 - `store.js` – IndexedDB, Cache, JSON-Export/Import
 - `activities.js` – **zentrale Aktivitäten-Konfiguration**: `id, name, icon, color, c2` (Farbverlauf), `type` (`check` | `count`), bei `count` `step` und `unit`, optional `minutes` + `kmPerUnit` (Strecken-Schätzung)
-- `sw.js` – Service Worker; **bei jeder Änderung an den Dateien `CACHE` hochzählen** (aktuell `moveme-v2`), sonst sehen installierte Apps die neue Version spät
+- `sw.js` – Service Worker; **bei jeder Änderung an den Dateien `CACHE` hochzählen** (aktuell `moveme-v3`, plus `VERSION` in `app.js` mitziehen), sonst sehen installierte Apps die neue Version spät
 - `manifest.webmanifest`, `icons/` – PWA-Metadaten, Icons (192/512 PNG, SVG)
 
 ## Funktionen
