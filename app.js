@@ -1,7 +1,7 @@
 import { ACTIVITIES } from './activities.js';
 import * as store from './store.js';
 
-const VERSION = '3';
+const VERSION = '4';
 const $view = document.getElementById('view');
 const $tabs = document.getElementById('tabs');
 
@@ -165,6 +165,7 @@ function settingsView() {
       <button class="btn ghost" data-act="import">Daten importieren</button>
       <input type="file" id="file" accept="application/json,.json" hidden>
       <p class="hint" id="msg"></p>
+      <p class="hint" id="store-info"></p>
     </section>
     <p class="hint center">MoveMe · Version ${VERSION}</p>`;
 }
@@ -175,6 +176,21 @@ function render() {
   $view.innerHTML = views[state.tab]();
   for (const b of $tabs.children) b.classList.toggle('active', b.dataset.tab === state.tab);
   $view.scrollTop = 0;
+  if (state.tab === 'settings') showStorageInfo();
+}
+
+async function showStorageInfo() {
+  const { persisted, count } = await store.storageInfo();
+  const el = document.getElementById('store-info');
+  if (!el) return;
+  const p = persisted === true ? 'dauerhaft (wird nicht automatisch gelöscht)'
+    : persisted === false ? 'nicht dauerhaft (Browser darf bei Platzmangel löschen)' : 'unbekannt';
+  el.textContent = `${count} Einträge gespeichert · Speicher: ${p}`;
+}
+
+// Speichern im Hintergrund; schlägt es fehl, soll das nicht unbemerkt bleiben
+function save(date, id, entry) {
+  store.set(date, id, entry).catch((err) => alert('Speichern fehlgeschlagen: ' + (err?.message || err)));
 }
 
 // ---------- Aktionen ----------
@@ -183,11 +199,11 @@ const buzz = (ms = 15) => navigator.vibrate && navigator.vibrate(ms);
 function changeCount(id, delta) {
   const a = act(id);
   const v = Math.max(0, (store.get(state.day, id).value || 0) + delta * (a.step || 1));
-  store.set(state.day, id, { done: v > 0, value: v });
+  save(state.day, id, { done: v > 0, value: v });
 }
 
 const actions = {
-  toggle: (el) => { const id = el.dataset.id; store.set(state.day, id, { done: !isDone(state.day, id) }); buzz(); },
+  toggle: (el) => { const id = el.dataset.id; save(state.day, id, { done: !isDone(state.day, id) }); buzz(); },
   inc: (el) => { changeCount(el.dataset.id, 1); buzz(); },
   dec: (el) => { changeCount(el.dataset.id, -1); buzz(); },
   prev: () => { state.day = addDays(state.day, -1); },
@@ -225,6 +241,7 @@ $view.addEventListener('change', async (e) => {
   try {
     await store.importJson(await e.target.files[0].text());
     msg.textContent = 'Import erfolgreich.';
+    showStorageInfo();
   } catch (err) {
     msg.textContent = 'Import fehlgeschlagen: ' + err.message;
   }

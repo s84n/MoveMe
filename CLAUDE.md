@@ -12,9 +12,9 @@ Offline-fähige PWA zum täglichen Abhaken von Joggen und Liegestützen. Läuft 
 - `index.html` – App-Shell, Tab-Leiste (Tag, Woche, Statistik, Mehr), Inline-Skript gegen Theme-Flackern
 - `style.css` – Theme-Variablen (hell, dunkel per System oder Schalter), Glas-Optik (backdrop-filter), Glanz-Verläufe auf erledigten Kacheln
 - `app.js` – Ansichten, Navigation, Statistik/Streaks, Theme-Umschalter, Export/Import
-- `store.js` – IndexedDB, Cache, JSON-Export/Import
+- `store.js` – IndexedDB (Schreiben mit Abschluss-Warten, Neuverbindung, `durability: strict`), Spiegelkopie in `localStorage` (`moveme-entries`), `navigator.storage.persist()`, Cache, JSON-Export/Import
 - `activities.js` – **zentrale Aktivitäten-Konfiguration**: `id, name, icon, color, c2` (Farbverlauf), `type` (`check` | `count`), bei `count` `step` und `unit`, optional `minutes` + `kmPerUnit` (Strecken-Schätzung)
-- `sw.js` – Service Worker; **bei jeder Änderung an den Dateien `CACHE` hochzählen** (aktuell `moveme-v3`, plus `VERSION` in `app.js` mitziehen), sonst sehen installierte Apps die neue Version spät
+- `sw.js` – Service Worker; **bei jeder Änderung an den Dateien `CACHE` hochzählen** (aktuell `moveme-v4`, plus `VERSION` in `app.js` mitziehen), sonst sehen installierte Apps die neue Version spät
 - `manifest.webmanifest`, `icons/` – PWA-Metadaten, Icons (192/512 PNG, SVG)
 
 ## Funktionen
